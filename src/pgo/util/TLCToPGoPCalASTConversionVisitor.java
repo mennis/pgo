@@ -397,6 +397,7 @@ public class TLCToPGoPCalASTConversionVisitor extends PcalASTUtil.Visitor<List<S
 			for(AST a : (Vector<AST>)c.labOr) {
 				statements.addAll(PcalASTUtil.accept(a, this));
 			}
+			cases.add(statements);
 		}
 		return Collections.singletonList(new Either(sourceLocationFromRegion(le), cases));
 	}
