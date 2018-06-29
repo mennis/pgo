@@ -65,7 +65,11 @@ public class PlusCalStatementTypeConstraintVisitor extends StatementVisitor<Void
 
 	@Override
 	public Void visit(Either either) throws RuntimeException {
-		// TODO Auto-generated method stub
+		for (List<Statement> eitherCase : either.getCases()) {
+			for (Statement statement : eitherCase) {
+				statement.accept(this);
+			}
+		}
 		return null;
 	}
 
