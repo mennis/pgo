@@ -36,20 +36,20 @@ public class MultithreadedProcessGlobalVariableStrategy extends GlobalVariableSt
 
 	@Override
 	public void initPostlude(ModuleBuilder moduleBuilder, BlockBuilder initBuilder) {
-		int nLock = registry.getNumberOfLockGroups();
-		if (nLock <= 0) {
-			// nothing to do
-			return;
-		}
 		moduleBuilder.addImport("sync");
-		VariableName pGoLock = moduleBuilder.defineGlobal(pGoLockUID, "pGoLock", PGO_LOCK_TYPE);
-		addVariable(pGoLockUID, pGoLock);
-		initBuilder.assign(pGoLock, new Make(PGO_LOCK_TYPE, new IntLiteral(nLock), null));
 		VariableName pGoStart = moduleBuilder.defineGlobal(pGoStartUID, "pGoStart", new ChanType(Builtins.Bool));
 		addVariable(pGoStartUID, pGoStart);
 		initBuilder.assign(pGoStart, new Make(new ChanType(Builtins.Bool), null, null));
 		VariableName pGoWait = moduleBuilder.defineGlobal(pGoWaitUID, "pGoWait", new TypeName("sync.WaitGroup"));
 		addVariable(pGoWaitUID, pGoWait);
+		int nLock = registry.getNumberOfLockGroups();
+		if (nLock <= 0) {
+			// no lock to allocate
+			return;
+		}
+		VariableName pGoLock = moduleBuilder.defineGlobal(pGoLockUID, "pGoLock", PGO_LOCK_TYPE);
+		addVariable(pGoLockUID, pGoLock);
+		initBuilder.assign(pGoLock, new Make(PGO_LOCK_TYPE, new IntLiteral(nLock), null));
 	}
 
 	@Override
