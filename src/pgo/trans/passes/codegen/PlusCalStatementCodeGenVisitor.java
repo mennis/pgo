@@ -1,4 +1,4 @@
-package pgo.trans.intermediate;
+package pgo.trans.passes.codegen;
 
 import pgo.TODO;
 import pgo.Unreachable;
@@ -15,15 +15,14 @@ import pgo.model.pcal.VariableDeclaration;
 import pgo.model.tla.PGoTLAExpression;
 import pgo.model.type.PGoType;
 import pgo.scope.UID;
-import pgo.trans.passes.codegen.CodeGenUtil;
-import pgo.trans.passes.codegen.CriticalSectionTracker;
+import pgo.trans.intermediate.DefinitionRegistry;
+import pgo.trans.intermediate.GlobalVariableStrategy;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public class PlusCalStatementCodeGenVisitor extends StatementVisitor<Void, RuntimeException> {
 	private DefinitionRegistry registry;

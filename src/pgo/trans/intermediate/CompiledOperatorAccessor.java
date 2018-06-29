@@ -15,6 +15,7 @@ import pgo.model.tla.PGoTLAOpDecl;
 import pgo.model.tla.PGoTLAOperatorDefinition;
 import pgo.model.type.*;
 import pgo.scope.UID;
+import pgo.trans.passes.codegen.TLAExpressionCodeGenVisitor;
 import pgo.trans.passes.type.TLAExpressionTypeConstraintVisitor;
 import pgo.util.Origin;
 

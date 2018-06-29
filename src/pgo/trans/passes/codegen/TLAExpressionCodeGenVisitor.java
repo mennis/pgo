@@ -1,4 +1,4 @@
-package pgo.trans.intermediate;
+package pgo.trans.passes.codegen;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,8 +14,7 @@ import pgo.model.golang.*;
 import pgo.model.tla.*;
 import pgo.model.type.*;
 import pgo.scope.UID;
-import pgo.trans.passes.codegen.CodeGenUtil;
-import pgo.trans.passes.codegen.GoExpressionIsConstantVisitor;
+import pgo.trans.intermediate.*;
 
 public class TLAExpressionCodeGenVisitor extends PGoTLAExpressionVisitor<Expression, RuntimeException> {
 	private BlockBuilder builder;

@@ -6,6 +6,9 @@ import pgo.TODO;
 import pgo.model.golang.*;
 import pgo.model.type.*;
 import pgo.scope.UID;
+import pgo.trans.passes.codegen.EqCodeGenVisitor;
+import pgo.trans.passes.codegen.LessThanCodeGenVisitor;
+import pgo.trans.passes.codegen.TLAExpressionCodeGenVisitor;
 import pgo.util.Origin;
 
 public class TLABuiltins {

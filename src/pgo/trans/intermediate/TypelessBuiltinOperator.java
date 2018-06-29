@@ -9,6 +9,7 @@ import pgo.model.golang.Expression;
 import pgo.model.tla.PGoTLAExpression;
 import pgo.model.type.PGoType;
 import pgo.scope.UID;
+import pgo.trans.passes.codegen.TLAExpressionCodeGenVisitor;
 
 public class TypelessBuiltinOperator extends BuiltinOperator {
 	

@@ -1,4 +1,4 @@
-package pgo.trans.intermediate;
+package pgo.trans.passes.codegen;
 
 import pgo.TODO;
 import pgo.model.golang.Binop;
@@ -19,6 +19,7 @@ import pgo.model.type.PGoTypeTuple;
 import pgo.model.type.PGoTypeUnrealizedNumber;
 import pgo.model.type.PGoTypeVariable;
 import pgo.model.type.PGoTypeVisitor;
+import pgo.trans.intermediate.DefinitionRegistry;
 
 public class PGoTypeEqualityCodeGenVisitor extends PGoTypeVisitor<Expression, RuntimeException> {
 

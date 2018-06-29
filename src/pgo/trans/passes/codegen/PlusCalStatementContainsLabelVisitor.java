@@ -1,10 +1,8 @@
-package pgo.trans.intermediate;
+package pgo.trans.passes.codegen;
 
-import pgo.InternalCompilerError;
 import pgo.Unreachable;
 import pgo.model.pcal.*;
 
-import javax.swing.plaf.nimbus.State;
 import java.util.List;
 
 public class PlusCalStatementContainsLabelVisitor extends StatementVisitor<Boolean, RuntimeException> {

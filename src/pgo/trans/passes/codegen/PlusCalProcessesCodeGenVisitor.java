@@ -1,4 +1,4 @@
-package pgo.trans.intermediate;
+package pgo.trans.passes.codegen;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +12,9 @@ import pgo.model.pcal.VariableDeclaration;
 import pgo.model.tla.PGoTLAExpression;
 import pgo.model.type.PGoType;
 import pgo.scope.UID;
+import pgo.trans.intermediate.DefinitionRegistry;
+import pgo.trans.intermediate.GlobalVariableStrategy;
+import pgo.trans.intermediate.PGoTypeGoTypeConversionVisitor;
 
 public class PlusCalProcessesCodeGenVisitor extends ProcessesVisitor<Void, RuntimeException> {
 	private DefinitionRegistry registry;

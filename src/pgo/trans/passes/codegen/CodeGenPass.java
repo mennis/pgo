@@ -1,4 +1,4 @@
-package pgo.trans.intermediate;
+package pgo.trans.passes.codegen;
 
 import java.util.Map;
 
@@ -12,9 +12,9 @@ import pgo.model.pcal.Processes;
 import pgo.model.pcal.SingleProcess;
 import pgo.model.type.PGoType;
 import pgo.scope.UID;
-import pgo.trans.passes.codegen.EtcdGlobalVariableStrategy;
-import pgo.trans.passes.codegen.MultithreadedProcessGlobalVariableStrategy;
-import pgo.trans.passes.codegen.StateServerGlobalVariableStrategy;
+import pgo.trans.intermediate.DefinitionRegistry;
+import pgo.trans.intermediate.GlobalVariableStrategy;
+import pgo.trans.intermediate.SingleThreadedProcessGlobalVariableStrategy;
 
 public class CodeGenPass {
 	private CodeGenPass() {}

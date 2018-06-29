@@ -1,4 +1,4 @@
-package pgo.trans.intermediate;
+package pgo.trans.passes.codegen;
 
 import java.util.Map;
 
@@ -35,11 +35,12 @@ import pgo.model.tla.PGoTLAUnary;
 import pgo.model.tla.PGoTLAUniversal;
 import pgo.model.tla.PlusCalDefaultInitValue;
 import pgo.model.type.PGoType;
-import pgo.model.type.PGoTypeMap;
 import pgo.scope.UID;
+import pgo.trans.intermediate.DefinitionRegistry;
+import pgo.trans.intermediate.GlobalVariableStrategy;
 import pgo.trans.intermediate.GlobalVariableStrategy.GlobalVariableWrite;
 
-public class TLAExpressionAssignmentLHSCodeGenVisitor extends PGoTLAExpressionVisitor<GlobalVariableStrategy.GlobalVariableWrite, RuntimeException> {
+public class TLAExpressionAssignmentLHSCodeGenVisitor extends PGoTLAExpressionVisitor<GlobalVariableWrite, RuntimeException> {
 	private BlockBuilder builder;
 	private DefinitionRegistry registry;
 	private Map<UID, PGoType> typeMap;

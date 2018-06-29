@@ -1,14 +1,12 @@
-package pgo.trans.intermediate;
+package pgo.trans.passes.codegen;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import pgo.TODO;
 import pgo.model.golang.*;
 import pgo.model.golang.type.MapType;
-import pgo.trans.passes.codegen.GoExpressionIsConstantVisitor;
 
 public class EqCodeGenVisitor extends TypeVisitor<Expression, RuntimeException> {
 
