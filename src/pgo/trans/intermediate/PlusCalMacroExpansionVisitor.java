@@ -49,7 +49,7 @@ public class PlusCalMacroExpansionVisitor extends StatementVisitor<List<Statemen
 
 	private List<Statement> substituteStatements(List<Statement> stmts){
 		List<Statement> result = new ArrayList<>();
-		for(Statement stmt : stmts) {
+		for (Statement stmt : stmts) {
 			result.addAll(stmt.accept(this));
 		}
 		return result;
@@ -76,13 +76,13 @@ public class PlusCalMacroExpansionVisitor extends StatementVisitor<List<Statemen
 	@Override
 	public List<Statement> visit(Either either) throws RuntimeException {
 		return Collections.singletonList(new Either(
-				either.getLocation(), either.getCases().stream().map(c -> substituteStatements(c)).collect(Collectors.toList())));
+				either.getLocation(), either.getCases().stream().map(this::substituteStatements).collect(Collectors.toList())));
 	}
 
 	@Override
 	public List<Statement> visit(Assignment assignment) throws RuntimeException {
 		List<AssignmentPair> pairs = new ArrayList<>();
-		for(AssignmentPair pair : assignment.getPairs()) {
+		for (AssignmentPair pair : assignment.getPairs()) {
 			pairs.add(new AssignmentPair(
 					pair.getLocation(),
 					pair.getLhs().accept(macroSubst),
@@ -112,13 +112,13 @@ public class PlusCalMacroExpansionVisitor extends StatementVisitor<List<Statemen
 	public List<Statement> visit(MacroCall macroCall) throws RuntimeException {
 		if(recursionSet.contains(macroCall.getTarget())) {
 			ctx.error(new RecursiveMacroCallIssue(macroCall));
-		}else if(macros.containsKey(macroCall.getTarget())){
+		} else if(macros.containsKey(macroCall.getTarget())){
 			Macro macro = macros.get(macroCall.getTarget());
 			if(macro.getParams().size() != macroCall.getArguments().size()) {
 				ctx.error(new MacroArgumentCountMismatchIssue(macroCall, macro));
-			}else {
+			} else {
 				Map<String, PGoTLAExpression> argsMap = new HashMap<>();
-				for(int i = 0; i < macroCall.getArguments().size(); ++i) {
+				for (int i = 0; i < macroCall.getArguments().size(); ++i) {
 					argsMap.put(macro.getParams().get(i), macroCall.getArguments().get(i));
 				}
 				Set<String> innerRecursionSet = new HashSet<>(recursionSet);
@@ -126,12 +126,12 @@ public class PlusCalMacroExpansionVisitor extends StatementVisitor<List<Statemen
 
 				PlusCalMacroExpansionVisitor innerVisitor = new PlusCalMacroExpansionVisitor(ctx.withContext(new ExpandingMacroCall(macroCall)), macros, innerRecursionSet, argsMap);
 				List<Statement> statements = new ArrayList<>();
-				for(Statement stmt : macro.getBody()) {
+				for (Statement stmt : macro.getBody()) {
 					statements.addAll(stmt.accept(innerVisitor));
 				}
 				return statements;
 			}
-		}else {
+		} else {
 			ctx.error(new UnresolvableMacroCallIssue(macroCall));
 		}
 		return Collections.singletonList(new Skip(macroCall.getLocation()));
@@ -140,7 +140,7 @@ public class PlusCalMacroExpansionVisitor extends StatementVisitor<List<Statemen
 	@Override
 	public List<Statement> visit(With with) throws RuntimeException {
 		VariableDeclaration oldVariable = with.getVariable();
-		if(macroArgs.containsKey(oldVariable.getName())) {
+		if (macroArgs.containsKey(oldVariable.getName())) {
 			// TODO: error reporting in this case?
 		}
 		VariableDeclaration newVariable = new VariableDeclaration(oldVariable.getLocation(), oldVariable.getName(),
