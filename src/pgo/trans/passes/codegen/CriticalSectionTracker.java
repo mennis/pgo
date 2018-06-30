@@ -30,6 +30,10 @@ public class CriticalSectionTracker {
 		this(registry, processUID, criticalSection, -1, null, null);
 	}
 
+	public LabelName getCurrentLabelName() {
+		return currentLabelName;
+	}
+
 	public void start(BlockBuilder builder, UID labelUID, LabelName labelName) {
 		int lockGroup = registry.getLockGroupOrDefault(labelUID, -1);
 		if (currentLockGroup != -1 && currentLockGroup != lockGroup) {
@@ -46,12 +50,12 @@ public class CriticalSectionTracker {
 		currentLockGroup = lockGroup;
 	}
 
-	public void abort(BlockBuilder builder) {
+	public void abort(BlockBuilder builder, LabelName optionalLabelName) {
 		if (currentLockGroup > -1) {
 			criticalSection.abortCriticalSection(
 					builder, processUID, currentLockGroup, currentLabelUID, currentLabelName);
 		}
-		builder.goTo(currentLabelName);
+		builder.goTo(optionalLabelName == null ? currentLabelName : optionalLabelName);
 		currentLockGroup = -1;
 		currentLabelUID = null;
 		currentLabelName = null;

@@ -192,8 +192,12 @@ public class BlockBuilder extends ASTBuilder implements Closeable {
 		nameMap.put(uid, name);
 	}
 
+	public boolean isInScope(UID uid) {
+		return nameMap.containsKey(uid);
+	}
+
 	public VariableName findUID(UID uid) {
-		if(!nameMap.containsKey(uid)) {
+		if (!nameMap.containsKey(uid)) {
 			throw new InternalCompilerError();
 		}
 		return nameMap.get(uid);

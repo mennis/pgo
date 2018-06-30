@@ -1,6 +1,6 @@
 package pgo.trans.passes.codegen;
 
-import pgo.TODO;
+import pgo.InternalCompilerError;
 import pgo.Unreachable;
 import pgo.model.golang.*;
 import pgo.model.pcal.*;
@@ -17,12 +17,11 @@ import pgo.model.type.PGoType;
 import pgo.scope.UID;
 import pgo.trans.intermediate.DefinitionRegistry;
 import pgo.trans.intermediate.GlobalVariableStrategy;
+import pgo.trans.intermediate.PlusCalStatementAtomicityInferenceVisitor;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class PlusCalStatementCodeGenVisitor extends StatementVisitor<Void, RuntimeException> {
 	private DefinitionRegistry registry;
@@ -31,21 +30,32 @@ public class PlusCalStatementCodeGenVisitor extends StatementVisitor<Void, Runti
 	private UID processUID;
 	private BlockBuilder builder;
 	private CriticalSectionTracker criticalSectionTracker;
+	private Function<BlockBuilder, LabelName> awaitAction;
 
 	private PlusCalStatementCodeGenVisitor(DefinitionRegistry registry, Map<UID, PGoType> typeMap,
 	                                       GlobalVariableStrategy globalStrategy, UID processUID, BlockBuilder builder,
-	                                       CriticalSectionTracker criticalSectionTracker) {
+	                                       CriticalSectionTracker criticalSectionTracker,
+	                                       Function<BlockBuilder, LabelName> awaitAction) {
 		this.registry = registry;
 		this.typeMap = typeMap;
 		this.globalStrategy = globalStrategy;
 		this.processUID = processUID;
 		this.builder = builder;
 		this.criticalSectionTracker = criticalSectionTracker;
+		this.awaitAction = awaitAction;
 	}
 
 	public PlusCalStatementCodeGenVisitor(DefinitionRegistry registry, Map<UID, PGoType> typeMap,
 	                                      GlobalVariableStrategy globalStrategy, UID processUID, BlockBuilder builder) {
-		this(registry, typeMap, globalStrategy, processUID, builder, new CriticalSectionTracker(registry, processUID, globalStrategy));
+		this(registry, typeMap, globalStrategy, processUID, builder,
+				new CriticalSectionTracker(registry, processUID, globalStrategy), ignored -> null);
+	}
+
+	private static void trackLocalVariableWrites(DefinitionRegistry registry, Set<UID> tracker, UID varUID) {
+		UID definitionUID = registry.followReference(varUID);
+		if (registry.isLocalVariable(definitionUID)) {
+			tracker.add(definitionUID);
+		}
 	}
 
 	@Override
@@ -82,7 +92,7 @@ public class PlusCalStatementCodeGenVisitor extends StatementVisitor<Void, Runti
 			}
 			for (Statement statement : while1.getBody()) {
 				statement.accept(new PlusCalStatementCodeGenVisitor(
-						registry, typeMap, globalStrategy, processUID, fb, criticalSectionTracker));
+						registry, typeMap, globalStrategy, processUID, fb, criticalSectionTracker, awaitAction));
 			}
 			actionAtLoopEnd.accept(fb);
 		}
@@ -98,7 +108,7 @@ public class PlusCalStatementCodeGenVisitor extends StatementVisitor<Void, Runti
 			try (BlockBuilder yes = b.whenTrue()) {
 				for (Statement stmt : if1.getYes()) {
 					stmt.accept(new PlusCalStatementCodeGenVisitor(
-							registry, typeMap, globalStrategy, processUID, yes, criticalSectionTracker));
+							registry, typeMap, globalStrategy, processUID, yes, criticalSectionTracker, awaitAction));
 				}
 				// if an if statement contains a label, then the statement(s) after it must be labeled
 				// if the statement after must be labeled, we know this critical section ends here (and
@@ -111,7 +121,7 @@ public class PlusCalStatementCodeGenVisitor extends StatementVisitor<Void, Runti
 			try (BlockBuilder no = b.whenFalse()) {
 				for (Statement stmt : if1.getNo()) {
 					stmt.accept(new PlusCalStatementCodeGenVisitor(
-							registry, typeMap, globalStrategy, processUID, no, noTracker));
+							registry, typeMap, globalStrategy, processUID, no, noTracker, awaitAction));
 				}
 				// see description for true case
 				if (containsLabels) {
@@ -125,7 +135,120 @@ public class PlusCalStatementCodeGenVisitor extends StatementVisitor<Void, Runti
 
 	@Override
 	public Void visit(Either either) throws RuntimeException {
-		throw new TODO();
+		// track which local variable is written to
+		Set<UID> localVarWrites = new HashSet<>();
+		PlusCalStatementAtomicityInferenceVisitor writeTracker = new PlusCalStatementAtomicityInferenceVisitor(
+				new UID(),
+				(ignored1, ignored2) -> {},
+				(varUID, ignored) -> trackLocalVariableWrites(registry, localVarWrites, varUID),
+				new HashSet<>());
+		List<List<Statement>> cases = either.getCases();
+		for (List<Statement> eitherCase : cases) {
+			if (eitherCase.size() <= 0) {
+				continue;
+			}
+			if (eitherCase.get(0) instanceof LabeledStatements) {
+				Statement statement = eitherCase.get(0);
+				// we only need to track the first labeled statements
+				if (statement.accept(new PlusCalStatementContainsAwaitVisitor())) {
+					statement.accept(writeTracker);
+				}
+			} else {
+				// we only need to track up to, and excluding, the first labeled statements
+				boolean foundAwait = false;
+				PlusCalStatementContainsAwaitVisitor awaitChecker =
+						new PlusCalStatementContainsAwaitVisitor(true);
+				for (Statement statement : eitherCase) {
+					if (statement instanceof LabeledStatements) {
+						break;
+					}
+					foundAwait = foundAwait || statement.accept(awaitChecker);
+				}
+				if (foundAwait) {
+					for (Statement statement : eitherCase) {
+						if (statement instanceof LabeledStatements) {
+							break;
+						}
+						statement.accept(writeTracker);
+					}
+				}
+			}
+		}
+		// make copies of local variables which are in scope and are written to
+		Map<VariableName, VariableName> localVarNames = new HashMap<>();
+		for (UID varUID : localVarWrites) {
+			if (builder.isInScope(varUID)) {
+				VariableName name = builder.findUID(varUID);
+				VariableName copyName = builder.varDecl(name.getName() + "Copy", name);
+				localVarNames.put(name, copyName);
+			}
+		}
+		// generate labels
+		List<LabelName> labels = new ArrayList<>();
+		for (int i = 0; i < cases.size(); i++) {
+			labels.add(builder.newLabel("case" + Integer.toString(i)));
+		}
+		LabelName endEither = builder.newLabel("endEither");
+		// start codegen
+		for (int i = 0; i < cases.size(); i++) {
+			List<Statement> eitherCase = cases.get(i);
+			if (eitherCase.size() <= 0) {
+				continue;
+			}
+			LabelName labelName = labels.get(i);
+			builder.label(labelName);
+			Function<BlockBuilder, LabelName> oldAwaitAction;
+			CriticalSectionTracker tracker = criticalSectionTracker;
+			PlusCalStatementCodeGenVisitor caseVisitor = this;
+			if (i != cases.size() - 1) {
+				int j = i + 1;
+				tracker = criticalSectionTracker.copy();
+				caseVisitor = new PlusCalStatementCodeGenVisitor(
+						registry, typeMap, globalStrategy, processUID, builder, tracker, builder -> {
+					// restore local variables
+					localVarNames.forEach(builder::assign);
+					return labels.get(j);
+				});
+				oldAwaitAction = ignored -> null;
+			} else {
+				LabelName eitherLabel = tracker.getCurrentLabelName();
+				if (eitherLabel == null) {
+					throw new InternalCompilerError();
+				}
+				oldAwaitAction = awaitAction;
+				awaitAction = builder -> {
+					// restore local variables
+					localVarNames.forEach(builder::assign);
+					return eitherLabel;
+				};
+			}
+			int nextIndex = 0;
+			if (eitherCase.get(0) instanceof LabeledStatements) {
+				// we need to special case the first labeled statements
+				eitherCase.get(0).accept(caseVisitor);
+				nextIndex = 1;
+			} else {
+				// we need to special case statements up to, and excluding, the first labeled statements
+				for (int k = 0; k < eitherCase.size(); k++, nextIndex = k) {
+					Statement statement = eitherCase.get(k);
+					if (statement instanceof LabeledStatements) {
+						break;
+					}
+					statement.accept(caseVisitor);
+				}
+			}
+			// codegen for the rest of the statements
+			caseVisitor.awaitAction = oldAwaitAction;
+			for (Statement statement : eitherCase.subList(nextIndex, eitherCase.size())) {
+				statement.accept(caseVisitor);
+			}
+			tracker.end(builder);
+			if (i != cases.size() - 1) {
+				builder.goTo(endEither);
+			}
+		}
+		builder.label(endEither);
+		return null;
 	}
 
 	@Override
@@ -238,7 +361,7 @@ public class PlusCalStatementCodeGenVisitor extends StatementVisitor<Void, Runti
 			try (BlockBuilder yes = ifBuilder.whenTrue()) {
 				// fork out an execution path for aborting
 				CriticalSectionTracker tracker = criticalSectionTracker.copy();
-				tracker.abort(yes);
+				tracker.abort(yes, awaitAction.apply(yes));
 			}
 		}
 		return null;

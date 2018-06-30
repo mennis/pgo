@@ -7,7 +7,6 @@ import pgo.scope.UID;
 
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 public class AtomicityInferencePass {
 	private AtomicityInferencePass() {}
